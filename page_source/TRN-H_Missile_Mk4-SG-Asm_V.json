@@ -1,0 +1,19 @@
+{
+  "grid_name" : "TRN Hydro Missile Mk4 SG Assembly [V]",
+  "url" : "https://steamcommunity.com/sharedfiles/filedetails/?id=2438024841",
+  "title" : "High velocity missile for air to air combat!",
+  "header" : [
+    "Tanren Engineering presents the latest in air to air missile technology, the Mk4 Hydrogen Missile.",
+    "Vanilla",
+    "Comes in a rack of 4."
+  ],
+  "setup" : [
+    "This blueprint has the welders and doors, ready to be integrated into a ship. For a version with only the small grid rack, see [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2437969770]this link[/url].",
+    "These missiles use the LAMP and WHAM programs, a guide to which can be found [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2219526455]here[/url].",
+    "These missiles are named Missile 1 through Missile 4. It is easy to rename them, just change the name of the group in the terminal and run the command \"setup\" in all of the WHAM programmable blocks."
+  ],
+  "attribution" : [
+    "LAMP/WHAM",
+    "The design of the missiles and rack is based on the missiles found on the [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2370612752]AC Sentinel Vehemence[/url]."
+  ]
+}
