@@ -2,7 +2,7 @@ import json
 import pathlib
 
 _this_dir = pathlib.Path(__file__).resolve().parent
-_links_path = _this_dir / "cfg" / "links.json"
+_links_path = _this_dir.parent / "cfg" / "links.json"
 
 
 class Page:
@@ -11,6 +11,7 @@ class Page:
     title_str = """[h1]{t}[/h1]\n\n"""
     setup_str = """[h2]Setup[/h2]\n\n"""
     attr_str = """[list]\n{items}[/list]\n"""
+    build_str = """\n\nThis page was auto generated with [url=https://github.com/james-ben/steamSpaceEngineersManager/tree/main]steamSpaceEngineersManager[/url]\n"""
 
     def __init__(self, path):
         load_path = pathlib.Path(path)
@@ -59,4 +60,5 @@ class Page:
         return self.formatted_title() + \
                 self.formatted_header() + \
                 self.formatted_setup() + \
-                self.formatted_attribution()
+                self.formatted_attribution() + \
+                self.build_str

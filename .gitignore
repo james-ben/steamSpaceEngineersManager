@@ -1,3 +1,11 @@
+# skip the build directory
+build
+
+
+#########################################
+# Below is auto-generated ignore paths.
+#########################################
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

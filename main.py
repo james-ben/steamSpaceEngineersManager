@@ -11,7 +11,7 @@
 
 import pathlib
 
-from workshop import Page
+from scripts.workshop import Page
 
 
 # globals

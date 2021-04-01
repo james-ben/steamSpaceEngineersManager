@@ -1,0 +1,18 @@
+{
+  "grid_name" : "TRN Hydro Missile Mk2 LG [V]",
+  "url" : "https://steamcommunity.com/sharedfiles/filedetails/?id=2438007654",
+  "title" : "Large grid missile for heavy targets",
+  "header" : [
+    "Tanren Engineering presents a wonderful piece of ballistic technology, the Mk2 Hydrogen Missile (large grid).",
+    "Vanilla",
+    "Connected via merge block for easy projecting, connector supplies the hydrogen to the tank, which is set on stockpile.",
+    "This missile is set to have a long burn time before guidance begins. If used in gravity, this will give it the advantage of striking from above."
+  ],
+  "setup" : [
+    "These missiles use the LAMP and WHAM programs, a guide to which can be found [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2219526455]here[/url].",
+    "The missile is named Missile 12. It is easy to rename, just change the name of the group in the terminal and run the command \"setup\" in the WHAM programmable block."
+  ],
+  "attribution" : [
+    "LAMP/WHAM"
+  ]
+}
