@@ -17,6 +17,10 @@ TODO:
 * Open up browser to workshop page each time a file is regenerated
 * Copy the new text to the clipboard
 * Give the user the path to the pictures that go with the file if those are out of date
+* Automatically put the logo on the thumb nail
+* links to the components of the blueprint (subgrids or assemblies)
+* the list of components required to build the ordnance
+* the features of the ships
 
 
 ## Details

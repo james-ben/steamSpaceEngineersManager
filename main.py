@@ -9,7 +9,16 @@
 # It will also keep track of the photo timestamps if any of those need to be
 #  updated as well.
 
+# Create temporary file using tempfile,
+#  compare with existing build file of same name with filecmp,
+#  copy over to new place if needed using shutil
+#  remove temp file using https://stackoverflow.com/a/9155528/12940429
+
+import os
+import shutil
+import filecmp
 import pathlib
+import tempfile
 
 from scripts.workshop import Page
 
@@ -19,28 +28,30 @@ _this_dir = pathlib.Path(__file__).resolve().parent
 
 
 def build_page_source(src, build_dir):
+    """Returns true if rewrote the file."""
+
     # create a new one
     new_page = Page(src)
-    new_page_str = new_page.format_page()
+    new_page_lines = new_page.format_page()
+    tmp_file = tempfile.NamedTemporaryFile(mode='w+t', delete=False)
+    for line in new_page_lines:
+        tmp_file.write(line + '\n')
+    tmp_file.close()
 
-    # load the old one
+    # compare with the old one
     old_build_name = src.name.split(".")[0] + ".txt"
     old_build_path = build_dir / old_build_name
+    new_build_name = tmp_file.name
 
-    write_new = True
-    if old_build_path.exists():
-        with open(old_build_path, 'r') as old_fp:
-            old_page = old_fp.readlines()
-        old_page_str = ''.join(old_page)
-        if old_page_str == new_page_str:
-            write_new = False
-
-    # write out new version
-    if write_new:
-        with open(old_build_path, 'w') as new_fp:
-            new_fp.write(new_page_str)
-
-    return write_new
+    if filecmp.cmp(old_build_path, new_build_name, shallow=False):
+        # they are the same, just cleanup and exit
+        os.remove(new_build_name)
+        return False
+    else:
+        # they are different, overwrite the old with new temp file
+        shutil.copy(new_build_name, old_build_path)
+        os.remove(new_build_name)
+        return True
 
 
 def main():
@@ -50,7 +61,7 @@ def main():
         build_dir.mkdir()
 
     # get list of inputs from source dir
-    source_dir = _this_dir / "page_source"
+    source_dir = _this_dir / "source" / "pages"
     src_list = source_dir.glob("*.json")
 
     for src in src_list:

@@ -8,10 +8,13 @@ _links_path = _this_dir.parent / "cfg" / "links.json"
 class Page:
 
     # class/static values
-    title_str = """[h1]{t}[/h1]\n\n"""
-    setup_str = """[h2]Setup[/h2]\n\n"""
-    attr_str = """[list]\n{items}[/list]\n"""
-    build_str = """\n\nThis page was auto generated with [url=https://github.com/james-ben/steamSpaceEngineersManager/tree/main]steamSpaceEngineersManager[/url]\n"""
+    title_str = """[h1]{t}[/h1]\n"""
+    section_header_str = """[h2]{name}[/h2]\n"""
+    attr_str = """[h2]Attribution[/h2]\n\n[list]\n{items}[/list]\n"""
+    single_content_str = "{name}: {content}\n"
+    content_url = "https://steamcommunity.com/sharedfiles/filedetails/?id={id}"
+    edit_url = "https://steamcommunity.com/sharedfiles/itemedittext/?id={id}"
+    build_str = """\nThis page was auto generated with [url=https://github.com/james-ben/steamSpaceEngineersManager/tree/main]steamSpaceEngineersManager[/url]\n"""
 
     def __init__(self, path):
         load_path = pathlib.Path(path)
@@ -29,23 +32,21 @@ class Page:
         if not isinstance(data, dict):
             raise ValueError("data in {} is not a dictionary!".format(load_path))
 
+        # get known common fields
+        self.type = data['type']
+        self.name = data['name']
+        self.id = data['id']
         self.title = data['title']
-        self.header = data['header']
-        self.setup = data['setup']
-        self.attribution = data['attribution']
+
+        # then the rest are optional
+        self.sections = data['sections']
 
     def formatted_title(self):
         return self.title_str.format(t=self.title)
 
-    def formatted_header(self):
-        return '\n'.join(self.header) + '\n\n'
-
-    def formatted_setup(self):
-        return self.setup_str + '\n'.join(self.setup) + '\n\n'
-
-    def formatted_attribution(self):
+    def formatted_attribution(self, attr_list):
         link_str = ""
-        for item in self.attribution:
+        for item in attr_list:
             if item in self.links:
                 link_str += "[*] {}\n".format(self.links[item])
             else:
@@ -57,8 +58,28 @@ class Page:
             return ""
 
     def format_page(self):
-        return self.formatted_title() + \
-                self.formatted_header() + \
-                self.formatted_setup() + \
-                self.formatted_attribution() + \
-                self.build_str
+        line_list = [self.formatted_title()]
+
+        for section, content in self.sections.items():
+            if section == 'header':
+                # special
+                line_list.extend(content)
+                line_list.append('')
+            elif section == 'attribution':
+                line_list.append(self.formatted_attribution(content))
+            elif isinstance(content, list):
+                # each section will have a name
+                line_list.append(self.section_header_str.format(name=section))
+                # then add all of the content lines
+                line_list.extend(content)
+                line_list.append('\n')
+            else:
+                # some are just single strings: concat name and content together
+                line_list.append(self.single_content_str.format(
+                    name=section.capitalize(),
+                    content=content
+                ))
+
+        # last thing, attribution to script
+        line_list.append(self.build_str)
+        return line_list

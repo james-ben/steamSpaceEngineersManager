@@ -1,5 +1,6 @@
 # skip the build directory
 build
+.idea
 
 
 #########################################
