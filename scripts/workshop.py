@@ -1,5 +1,6 @@
 import json
 import pathlib
+import webbrowser
 
 _this_dir = pathlib.Path(__file__).resolve().parent
 _links_path = _this_dir.parent / "cfg" / "links.json"
@@ -9,11 +10,12 @@ class Page:
 
     # class/static values
     title_str = """[h1]{t}[/h1]\n"""
-    section_header_str = """[h2]{name}[/h2]\n"""
-    attr_str = """[h2]Attribution[/h2]\n\n[list]\n{items}[/list]\n"""
+    section_header_str = """[h2]{name}[/h2]"""
+    attr_str = """[h2]Attribution[/h2]\n[list]\n{items}[/list]\n"""
     single_content_str = "{name}: {content}\n"
     content_url = "https://steamcommunity.com/sharedfiles/filedetails/?id={id}"
     edit_url = "https://steamcommunity.com/sharedfiles/itemedittext/?id={id}"
+    images_url = "https://steamcommunity.com/sharedfiles/managepreviews/?id={id}"
     build_str = """\nThis page was auto generated with [url=https://github.com/james-ben/steamSpaceEngineersManager/tree/main]steamSpaceEngineersManager[/url]\n"""
 
     def __init__(self, path):
@@ -41,6 +43,9 @@ class Page:
         # then the rest are optional
         self.sections = data['sections']
 
+    def edit_workshop_page(self):
+        webbrowser.open(self.edit_url.format(id=self.id))
+
     def formatted_title(self):
         return self.title_str.format(t=self.title)
 
@@ -57,6 +62,22 @@ class Page:
         else:
             return ""
 
+    def format_normal_section(self, section, content):
+        # each section will have a name
+        line_list = [self.section_header_str.format(name=section.capitalize()) + '\n']
+        # then add all of the content lines
+        line_list.extend(content)
+        line_list.append('')
+        return line_list
+
+    def format_bullet_section(self, section, content):
+        line_list = [self.section_header_str.format(name=section.split("_")[0].capitalize()),
+                     '[list]']
+        line_list.extend(['[*] {}'.format(x) for x in content])
+        line_list.append('[/list]')
+        line_list.append('')
+        return line_list
+
     def format_page(self):
         line_list = [self.formatted_title()]
 
@@ -68,11 +89,10 @@ class Page:
             elif section == 'attribution':
                 line_list.append(self.formatted_attribution(content))
             elif isinstance(content, list):
-                # each section will have a name
-                line_list.append(self.section_header_str.format(name=section))
-                # then add all of the content lines
-                line_list.extend(content)
-                line_list.append('\n')
+                if section.endswith("_list"):
+                    line_list.extend(self.format_bullet_section(section, content))
+                else:
+                    line_list.extend(self.format_normal_section(section, content))
             else:
                 # some are just single strings: concat name and content together
                 line_list.append(self.single_content_str.format(

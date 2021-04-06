@@ -19,6 +19,7 @@ import shutil
 import filecmp
 import pathlib
 import tempfile
+import subprocess as sp
 
 from scripts.workshop import Page
 
@@ -27,11 +28,11 @@ from scripts.workshop import Page
 _this_dir = pathlib.Path(__file__).resolve().parent
 
 
-def build_page_source(src, build_dir):
+def build_page_source(src_path, build_dir):
     """Returns true if rewrote the file."""
 
     # create a new one
-    new_page = Page(src)
+    new_page = Page(src_path)
     new_page_lines = new_page.format_page()
     tmp_file = tempfile.NamedTemporaryFile(mode='w+t', delete=False)
     for line in new_page_lines:
@@ -39,7 +40,7 @@ def build_page_source(src, build_dir):
     tmp_file.close()
 
     # compare with the old one
-    old_build_name = src.name.split(".")[0] + ".txt"
+    old_build_name = src_path.name.split(".")[0] + ".txt"
     old_build_path = build_dir / old_build_name
     new_build_name = tmp_file.name
 
@@ -51,6 +52,12 @@ def build_page_source(src, build_dir):
         # they are different, overwrite the old with new temp file
         shutil.copy(new_build_name, old_build_path)
         os.remove(new_build_name)
+        # open in notepad
+        # startfile has no way of knowing when it returns
+        # os.startfile(old_build_path)
+        new_page.edit_workshop_page()
+        proc = sp.Popen(['notepad.exe', str(old_build_path)])
+        proc.wait()
         return True
 
 
