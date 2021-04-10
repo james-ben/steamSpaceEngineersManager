@@ -27,7 +27,7 @@ _config.read(str(_this_dir.parent / "source" / "config.ini"))
 
 class Grid:
 
-    def __init__(self, soup):
+    def __init__(self, soup, blocks_dict=None, comps_dict=None):
         self.soup = soup
         # "gridsizeenum" is "Small" or "Large"
         self.size = soup.find("gridsizeenum")
@@ -36,10 +36,6 @@ class Grid:
         self.name = soup.find("displayname").contents[0]
         # can determine the size of the grid using "localcoordsys" and finding min and max x,y,z
         self.localcoordsys = int(soup.find("localcoordsys").contents[0])
-
-        # self.blocks = [Block(b) for b in soup.find("myobjectbuilder_cubeblock")]
-        def get_block_type(block):
-            return block.find("subtypename").contents[0]
 
         def get_block_loc(block):
             return {d: int(v) for d, v in block.find("min").attrs.items()}
@@ -51,7 +47,10 @@ class Grid:
         # parse the blocks
         for b in soup.find_all("myobjectbuilder_cubeblock"):
             if isinstance(b, bs4.element.Tag):
-                b_type = get_block_type(b)
+                try:
+                    b_type = get_block_name(b)
+                except AttributeError:
+                    raise
                 b_loc = get_block_loc(b)
                 if b_type in self.blocks:
                     self.blocks[b_type] += 1
@@ -64,6 +63,25 @@ class Grid:
         # absolute distance between 2 values
         self.dimensions = {mi[0]: abs(mi[1]-mx[1]) for mi, mx in zip(mins.items(), maxs.items())}
 
+        # compute the component requirements and grid weight
+        self.components = {}
+        self.block_count = 0
+        self.grid_pcu = 0
+
+        for b, num in self.blocks.items():
+            b_comp = blocks_dict[b]['components']
+            for c, n in b_comp.items():
+                if c in self.components:
+                    self.components[c] += n * num
+                else:
+                    self.components[c] = n * num
+            self.block_count += num
+            self.grid_pcu += int(blocks_dict[b]['pcu'])
+
+        self.weight = 0
+        for c, n in self.components.items():
+            self.weight += float(comps_dict[c]["mass"]) * n
+
     def get_grid_size(self):
         if isinstance(self.size, bs4.element.Tag):
             return self.size.contents[0]
@@ -71,12 +89,30 @@ class Grid:
             return "Unknown"
 
     def get_grid_dimension(self):
-        return "{}x{}x{}".format(*sorted(self.dimensions.values()))
+        return "{}x{}x{}".format(*sorted(self.dimensions.values(), reverse=True))
+
+    def get_grid_components(self):
+        if self.components:
+            return self.components
+        else:
+            return None
+
+    def get_thrusters(self):
+        return {b: n for b, n in self.blocks.items() if "Thrust" in b}
+
+    def get_grid_mass(self):
+        return self.weight
+
+    def get_block_count(self):
+        return self.block_count
+
+    def get_grid_pcu(self):
+        return self.grid_pcu
 
 
 class Blueprint:
 
-    def __init__(self, name):
+    def __init__(self, name, blocks_dict=None, comps_dict=None):
         """name - the name of the directory that contains the blueprint"""
         self.name = name
         # load the .sbc file
@@ -84,19 +120,76 @@ class Blueprint:
         with open(sbc_file, 'r') as fp:
             self.soup = bs4.BeautifulSoup(fp, 'lxml')
 
-        self.grids = [Grid(g) for g in self.soup.find_all("cubegrid")]
+        self.grids = [Grid(g, blocks_dict, comps_dict) for g in self.soup.find_all("cubegrid")]
+
+    def get_largest_grid_dimensions(self):
+        biggest_dim = 0
+        ret_dim = None
+
+        for g in self.grids:
+            dim = g.get_grid_dimension()
+            dim_max = int(dim.split("x", maxsplit=1)[0])
+            if dim_max > biggest_dim:
+                biggest_dim = dim_max
+                ret_dim = dim
+
+        return ret_dim
+
+    def get_total_blocks(self):
+        return sum([g.get_block_count() for g in self.grids])
+
+    def get_total_pcu(self):
+        return sum([g.get_grid_pcu() for g in self.grids])
+
+    def get_total_mass(self):
+        return sum([g.get_grid_mass() for g in self.grids])
+
+    def get_acceleration(self, block_dict, gravity=0):
+        """Computes the acceleration from weight and number of thrusters.
+
+        This method should only be called on missile blueprints.
+        TODO: get it working for ship blueprints.
+        """
+
+        total_mass = self.get_total_mass()
+        # in a vacuum, weight is 0
+        total_weight = total_mass * gravity
+        thrusters = self.grids[0].get_thrusters()
+        forcemagnitude = 0.0
+
+        for t, n in thrusters.items():
+            t_data = block_dict[t]
+            if t_data['type'] == 'Thrust':
+                forcemagnitude += float(t_data['forcemagnitude']) * n
+
+        # formula is ((thrust - weight) / mass)
+        return (forcemagnitude - total_weight) / total_mass
+
+
+def get_block_name(soup):
+    block_id = soup.find("id")
+    if block_id is None:
+        block_name = soup.find("subtypename")
+        if not block_name.contents:
+            # stupid hangar doors
+            block_name = soup.attrs['xsi:type'].split("_", maxsplit=1)[1]
+        else:
+            block_name = block_name.contents[0]
+    else:
+        try:
+            block_name = block_id.find("subtypeid").contents[0]
+        except IndexError:
+            # just use the typeid, because that means there's only one kind
+            block_name = block_id.find('typeid').contents[0]
+    return block_name
 
 
 def get_block_dict(soup):
     block_dict = {}
 
     # get the name first
+    block_name = get_block_name(soup)
     block_id = soup.find("id")
-    try:
-        block_name = block_id.find("subtypeid").contents[0]
-    except IndexError:
-        # just use the typeid, because that means there's only one kind
-        block_name = block_id.find('typeid').contents[0]
     # type of block (thruster, battery, etc)
     block_dict['type'] = block_id.find('typeid').contents[0]
 
@@ -197,10 +290,10 @@ def parse_components(components_file=None):
 def create_json_dicts():
     build_dir = _this_dir.parent / "build"
 
-    # game_blocks = parse_game_blocks()
-    # game_blocks_file = build_dir / "game_blocks.json"
-    # with open(game_blocks_file, 'w') as jf:
-    #     json.dump(game_blocks, jf, indent=2)
+    game_blocks = parse_game_blocks()
+    game_blocks_file = build_dir / "game_blocks.json"
+    with open(game_blocks_file, 'w') as jf:
+        json.dump(game_blocks, jf, indent=2)
 
     components = parse_components()
     components_file = build_dir / "components.json"

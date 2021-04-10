@@ -15,12 +15,14 @@
 #  remove temp file using https://stackoverflow.com/a/9155528/12940429
 
 import os
+import json
 import shutil
 import filecmp
 import pathlib
 import tempfile
 import subprocess as sp
 
+from scripts import sbc_parser
 from scripts.workshop import Page
 
 
@@ -28,12 +30,12 @@ from scripts.workshop import Page
 _this_dir = pathlib.Path(__file__).resolve().parent
 
 
-def build_page_source(src_path, build_dir):
+def build_page_source(src_path, build_dir, blocks_dict, comps_dict):
     """Returns true if rewrote the file."""
 
     # create a new one
-    new_page = Page(src_path)
-    new_page_lines = new_page.format_page()
+    new_page = Page(src_path, blocks_dict, comps_dict)
+    new_page_lines = new_page.format_page(blocks_dict)
     tmp_file = tempfile.NamedTemporaryFile(mode='w+t', delete=False)
     for line in new_page_lines:
         tmp_file.write(line + '\n')
@@ -71,8 +73,20 @@ def main():
     source_dir = _this_dir / "source" / "pages"
     src_list = source_dir.glob("*.json")
 
+    # load the information about blocks and components
+    blocks_file = build_dir / "game_blocks.json"
+    comps_file = build_dir / "components.json"
+    # make sure exists
+    if (not blocks_file.exists()) or (not comps_file.exists()):
+        sbc_parser.create_json_dicts()
+    with open(blocks_file, 'r') as jf:
+        blocks_dict = json.load(jf)
+    with open(comps_file, 'r') as jf:
+        comps_dict = json.load(jf)
+
+    # now go generate all of the output files
     for src in src_list:
-        if build_page_source(src, build_dir):
+        if build_page_source(src, build_dir, blocks_dict, comps_dict):
             print("Rebuilt {}".format(src))
 
 
