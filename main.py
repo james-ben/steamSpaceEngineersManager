@@ -31,7 +31,7 @@ _this_dir = pathlib.Path(__file__).resolve().parent
 
 
 def build_page_source(src_path, build_dir, blocks_dict, comps_dict):
-    """Returns true if rewrote the file."""
+    """Returns Page object if rewrote the file, None otherwise."""
 
     # create a new one
     new_page = Page(src_path, blocks_dict, comps_dict)
@@ -46,10 +46,10 @@ def build_page_source(src_path, build_dir, blocks_dict, comps_dict):
     old_build_path = build_dir / old_build_name
     new_build_name = tmp_file.name
 
-    if filecmp.cmp(old_build_path, new_build_name, shallow=False):
+    if old_build_path.exists() and filecmp.cmp(old_build_path, new_build_name, shallow=False):
         # they are the same, just cleanup and exit
         os.remove(new_build_name)
-        return False
+        return None
     else:
         # they are different, overwrite the old with new temp file
         shutil.copy(new_build_name, old_build_path)
@@ -57,10 +57,18 @@ def build_page_source(src_path, build_dir, blocks_dict, comps_dict):
         # open in notepad
         # startfile has no way of knowing when it returns
         # os.startfile(old_build_path)
-        new_page.edit_workshop_page()
-        proc = sp.Popen(['notepad.exe', str(old_build_path)])
-        proc.wait()
-        return True
+        # if new_page.edit_workshop_page():
+        #     proc = sp.Popen(['notepad.exe', str(old_build_path)])
+        #     proc.wait()
+        return new_page
+
+
+def prepare_images(page):
+    page.format_images()
+
+
+def prepare_thumbnails(page):
+    page.format_thumbnail()
 
 
 def main():
@@ -86,8 +94,11 @@ def main():
 
     # now go generate all of the output files
     for src in src_list:
-        if build_page_source(src, build_dir, blocks_dict, comps_dict):
+        page = build_page_source(src, build_dir, blocks_dict, comps_dict)
+        if page is not None:
             print("Rebuilt {}".format(src))
+            prepare_thumbnails(page)
+            prepare_images(page)
 
 
 # Press the green button in the gutter to run the script.

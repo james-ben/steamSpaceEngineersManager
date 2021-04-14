@@ -1,11 +1,15 @@
 import json
 import pathlib
 import webbrowser
+import configparser
 
 from scripts.sbc_parser import Blueprint
+from scripts.images import ImageSet
 
 _this_dir = pathlib.Path(__file__).resolve().parent
 _links_path = _this_dir.parent / "cfg" / "links.json"
+_config = configparser.ConfigParser()
+_config.read(str(_this_dir.parent / "source" / "config.ini"))
 
 
 class Page:
@@ -48,7 +52,9 @@ class Page:
         self.sections = data['sections']
 
         # auto generate some things by parsing the blueprint file
-        self.bp = Blueprint(self.name, blocks_dict, comps_dict)
+        self.bp_path = pathlib.Path(_config['General']['BlueprintPath']) / self.name
+        self.bp = Blueprint(self.bp_path, blocks_dict, comps_dict)
+
         # components list
         # if (len(self.bp.grids) == 1) and (self.bp.grids[0].get_grid_size() == "Small"):
         if len(self.bp.grids) == 1:
@@ -57,8 +63,25 @@ class Page:
         else:
             self.grid_comps = None
 
+        # images
+        logo_path = pathlib.Path(_config['Images']['LogoPath'])
+        self.images = ImageSet(self.bp_path, logo_path, data['images']) \
+            if 'images' in data else None
+
     def edit_workshop_page(self):
-        webbrowser.open(self.edit_url.format(id=self.id))
+        if self.id:
+            webbrowser.open(self.edit_url.format(id=self.id))
+            return True
+        else:
+            return False
+
+    def format_thumbnail(self):
+        if self.images is not None:
+            self.images.generate_thumbnail()
+
+    def format_images(self):
+        if self.images is not None:
+            self.images.format_images()
 
     def formatted_title(self):
         return self.title_str.format(t=self.title)

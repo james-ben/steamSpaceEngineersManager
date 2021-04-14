@@ -15,14 +15,14 @@ all tags are converted to lowercase by BeautifulSoup!
 
 import json
 import pathlib
-import configparser
+# import configparser
 
 import bs4
 
 
-_config = configparser.ConfigParser()
+# _config = configparser.ConfigParser()
 _this_dir = pathlib.Path(__file__).resolve().parent
-_config.read(str(_this_dir.parent / "source" / "config.ini"))
+# _config.read(str(_this_dir.parent / "source" / "config.ini"))
 
 
 class Grid:
@@ -45,7 +45,8 @@ class Grid:
         maxs = {d: self.localcoordsys for d in ['x', 'y', 'z']}
 
         # parse the blocks
-        for b in soup.find_all("myobjectbuilder_cubeblock"):
+        blocks = soup.find("cubeblocks")
+        for b in blocks.find_all("myobjectbuilder_cubeblock", recursive=False):
             if isinstance(b, bs4.element.Tag):
                 try:
                     b_type = get_block_name(b)
@@ -112,11 +113,11 @@ class Grid:
 
 class Blueprint:
 
-    def __init__(self, name, blocks_dict=None, comps_dict=None):
+    def __init__(self, bp_dir, blocks_dict=None, comps_dict=None):
         """name - the name of the directory that contains the blueprint"""
-        self.name = name
+        # self.name = name
         # load the .sbc file
-        sbc_file = pathlib.Path(_config['General']['BlueprintPath']) / name / "bp.sbc"
+        sbc_file = bp_dir / "bp.sbc"
         with open(sbc_file, 'r') as fp:
             self.soup = bs4.BeautifulSoup(fp, 'lxml')
 
