@@ -45,7 +45,7 @@ class Page:
         # get known common fields
         self.type = data['type']
         self.name = data['name']
-        self.id = data['id']
+        self.id = data['id'] if 'id' in data else None
         self.title = data['title']
 
         # then the rest are optional
@@ -171,3 +171,5 @@ class Page:
         # last thing, attribution to script
         line_list.append(self.build_str)
         return line_list
+
+    # TODO: add in classes of controls for cockpits

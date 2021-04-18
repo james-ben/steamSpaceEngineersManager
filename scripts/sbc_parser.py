@@ -15,7 +15,7 @@ all tags are converted to lowercase by BeautifulSoup!
 
 import json
 import pathlib
-# import configparser
+import tempfile
 
 import bs4
 
@@ -38,7 +38,10 @@ class Grid:
         self.localcoordsys = int(soup.find("localcoordsys").contents[0])
 
         def get_block_loc(block):
-            return {d: int(v) for d, v in block.find("min").attrs.items()}
+            try:
+                return {d: int(v) for d, v in block.find("min").attrs.items()}
+            except AttributeError:
+                return {'x': 0, 'y': 0, 'z': 0}
 
         self.blocks = {}
         mins = {d: self.localcoordsys for d in ['x', 'y', 'z']}
@@ -77,7 +80,11 @@ class Grid:
                 else:
                     self.components[c] = n * num
             self.block_count += num
-            self.grid_pcu += int(blocks_dict[b]['pcu'])
+            if 'pcu' in blocks_dict[b]:
+                self.grid_pcu += int(blocks_dict[b]['pcu'])*num
+            else:
+                # assume pcu = 1
+                self.grid_pcu += num
 
         self.weight = 0
         for c, n in self.components.items():
@@ -110,6 +117,8 @@ class Grid:
     def get_grid_pcu(self):
         return self.grid_pcu
 
+    # TODO: get number of guns, etc
+
 
 class Blueprint:
 
@@ -118,8 +127,21 @@ class Blueprint:
         # self.name = name
         # load the .sbc file
         sbc_file = bp_dir / "bp.sbc"
-        with open(sbc_file, 'r') as fp:
-            self.soup = bs4.BeautifulSoup(fp, 'lxml')
+        with open(sbc_file, 'r', encoding='utf-8') as fp:
+            # first, strip out all text from programmable blocks, marked by <Program> tag
+            with tempfile.TemporaryFile(mode='w+') as tfp:
+                write_flag = True
+                for line in fp:
+                    if "<Program>" in line:
+                        write_flag = False
+                    elif "</Program>" in line:
+                        write_flag = True
+                    elif write_flag:
+                        tfp.write(line)
+
+                # go back to the beginning and parse the new file
+                tfp.seek(0)
+                self.soup = bs4.BeautifulSoup(tfp, 'lxml')
 
         self.grids = [Grid(g, blocks_dict, comps_dict) for g in self.soup.find_all("cubegrid")]
 

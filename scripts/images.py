@@ -74,6 +74,18 @@ class ImageSet:
             shlex.quote(str(dst_path))
         ]
 
+    @staticmethod
+    def make_resize_cmd(img_path, img_size):
+        return [
+            'powershell.exe',
+            _magick_path,
+            'convert',
+            shlex.quote(str(img_path)),
+            '-resize',
+            img_size,
+            shlex.quote(str(img_path))
+        ]
+
     def get_thumb_info(self, cfg):
         if 'thumb' in cfg:
             thumb_cfg = cfg['thumb']
@@ -120,6 +132,12 @@ class ImageSet:
         proc.wait()
         return proc.returncode
 
+    def resize_image(self, img_path):
+        cmd = self.make_resize_cmd(img_path, self.dst_size)
+        proc = sp.Popen(cmd)
+        proc.wait()
+        return proc.returncode
+
     def generate_thumbnail(self):
         thumb_src = self.img_path / 'thumb.png'
         if thumb_src.is_file():
@@ -149,16 +167,27 @@ class ImageSet:
         return proc.returncode
 
     def format_images(self):
-        # do any of the images match in the cfg dict?
-        for k, v in self.cfg.items():
-            if k == 'thumb':
+        if self.imgs is None:
+            return None
+        # look at all of the files and make sure they're the right size
+        for img in self.imgs:
+            # is there a config for it?
+            img_basename = img.stem
+            if img_basename == 'thumb':
                 continue
-            img_path = self.img_path / '{}.png'.format(k)
-            if img_path in self.imgs:
+            if img_basename in self.cfg:
+                img_cfg = self.cfg[img_basename]
                 # apply the formatting
-                if 'logo' in v:
-                    self.add_logo(img_path, 'logo-complex', v['logo'])
-                if 'text' in v:
-                    self.add_text(img_path, v['text'])
+                if 'logo' in img_cfg:
+                    self.add_logo(img, 'logo-complex', img_cfg['logo'])
+                if 'text' in img_cfg:
+                    self.add_text(img, img_cfg['text'])
+            else:
+                # if not, just make sure it's the right size (less than 2MB)
+                if img.stat().st_size > 2000000:
+                    self.resize_image(img)
 
         return None
+
+# TODO: move the images to a separate dir, instead of inside the BP dir,
+#  so they don't get deleted when updating the BP

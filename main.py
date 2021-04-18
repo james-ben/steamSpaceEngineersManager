@@ -57,9 +57,9 @@ def build_page_source(src_path, build_dir, blocks_dict, comps_dict):
         # open in notepad
         # startfile has no way of knowing when it returns
         # os.startfile(old_build_path)
-        # if new_page.edit_workshop_page():
-        #     proc = sp.Popen(['notepad.exe', str(old_build_path)])
-        #     proc.wait()
+        if new_page.edit_workshop_page():
+            proc = sp.Popen(['notepad.exe', str(old_build_path)])
+            proc.wait()
         return new_page
 
 
